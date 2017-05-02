@@ -23,14 +23,14 @@
 GLuint texture[2];//存储纹理数据
 float wall[8][3];//存放画墙的正方体
 
-int window_width = 630;
-int window_height = 630;
+int window_width = 640;
+int window_height = 640;
 int crt_window = MAZE_WALK; //1为迷宫窗口，2为绘制迷宫窗口
 int draw_which = 0; //WALL =1 GROUND =2
 int maze_size = 20;
 int view = TRIRD_PERSON; //默认第三人称
-double crt_pos_x, crt_pos_z, save_pos_x, save_pos_z, look_x, look_z, eye_x, eye_z;
-double angle, distant = 6, angleM = 90;//视角，视野,模型
+double crt_pos_x, crt_pos_z, save_pos_x, save_pos_z, look_x, look_z, eye_x, eye_y=0.5, eye_z;
+double angle, distant = 5, angleM = 90;//视角，视点离模型的位置,模型
 double bili = 4;//第三视角事件体与屏幕坐标比例
 double box_r = 7;//墙体大小
 SeekRoad seek;
@@ -107,16 +107,11 @@ void menu(int id) {
 		glutPostRedisplay();
 		break;
 	case 4:
-		if (view == TRIRD_PERSON)
-			moveTo(save_pos_x, save_pos_z);
-		else {
-			crt_pos_z = save_pos_z;
-			crt_pos_x = save_pos_x;
-		}
+		//if (view == TRIRD_PERSON)
+			moveTo((int)((save_pos_x + box_r / 2) / box_r), (int)((save_pos_z + box_r / 2) / box_r));
 		setLookEye();
 		glutPostRedisplay();
 		break;
-
 	case 5:
 		switchWindow(MAZE_EDIT);
 		break;
@@ -153,7 +148,7 @@ void createMyMenu() {
 		glutAddMenuEntry("第一视角", 1);
 		glutAddMenuEntry("第三视角", 2);
 		glutAddMenuEntry("保存当前位置", 3);
-		glutAddMenuEntry("返回上一位置", 4);
+		glutAddMenuEntry("返回保存位置", 4);
 		glutAddMenuEntry("设置迷宫", 5);
 		glutAttachMenu(GLUT_RIGHT_BUTTON);
 	}
@@ -169,6 +164,8 @@ void createMyMenu() {
 }
 
 void switchWindow(int window) {
+	if(window==MAZE_EDIT)
+		memcpy(new_maze, maze, sizeof maze);
 	crt_window = window;
 	createMyMenu();
 }
@@ -192,6 +189,18 @@ void myMouseFunc(int button,int state,int x,int y){
 		if(draw_which == GROUND)
 			new_maze[new_maze_z][new_maze_x] = 0;
 	}
+	if (button == GLUT_WHEEL_UP) {
+		distant--; 
+		setLookEye();
+		display();
+	}
+	if (button == GLUT_WHEEL_DOWN) {
+		distant++; 
+		setLookEye();
+		display();
+	}
+	printf("distant %lf\n", distant);
+
 }
 
 void inputKeyFunc(int key, int x, int y) {
@@ -277,6 +286,10 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		inputKeyFunc(GLUT_KEY_UP, x, y); break;
 	case 's':
 		inputKeyFunc(GLUT_KEY_DOWN, x, y); break;
+	case 'v':
+		eye_y++; break; 
+	case 'b':
+		eye_y--; break;
 	default:
 		break;
 	}
@@ -442,14 +455,13 @@ void display() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		glEnable(GL_DEPTH_TEST);
-
 		glEnable(GL_TEXTURE_2D);
 
 		glBindTexture(GL_TEXTURE_2D, Decal_Texture);
 
 		glPushMatrix();
 		glTranslatef(crt_pos_x, -1.5, crt_pos_z);//模型位置
-		glScalef(0.05*view, 0.05*view, 0.05*view);//调整模型大小，避免第三视角时，模型太小，不好观察
+		glScalef(0.07*view, 0.07*view, 0.07*view);//调整模型大小，避免第三视角时，模型太小，不好观察
 
 		glRotatef(angleM, 0.0, 1.0, 0.0);//模型方向
 
@@ -525,12 +537,9 @@ void display() {
 			drawGround();
 
 			//画迷宫
-			for (int i = 0; i<maze_size; i++)
-			{
-				for (int j = 0; j<maze_size; j++)
-				{
-					if (maze[j][i] == 1)
-					{
+			for (int i = 0; i<maze_size; i++){
+				for (int j = 0; j<maze_size; j++){
+					if (maze[j][i] == 1){
 						glPushMatrix();
 						glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
 						makeBox(box_r, box_r, box_r);
@@ -590,8 +599,8 @@ void display() {
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
 
-			gluPerspective(30.0, (double)window_width / (double)window_height, 1.0f, 100.0f);
-			gluLookAt(eye_x, 0.5f, eye_z, // 视点，为了能看见模型，所以视点是在以模型为中心的圆上。
+			gluPerspective(30.0, (double)window_width / (double)window_height, 1.0f, 300.0f);//可以控制视野
+			gluLookAt(eye_x, eye_y, eye_z, // 视点，为了能看见模型，所以视点是在以模型为中心的圆上。
 				look_x, 0.0f, look_z, 0.0f, 1.0f, 0.0f);
 
 			glMatrixMode(GL_MODELVIEW);
@@ -601,12 +610,9 @@ void display() {
 			//画地面
 			drawGround();
 			//画迷宫
-			for (int i = 0; i<maze_size; i++)
-			{
-				for (int j = 0; j<maze_size; j++)
-				{
-					if (maze[j][i] == 1)
-					{
+			for (int i = 0; i<maze_size; i++){
+				for (int j = 0; j<maze_size; j++){
+					if (maze[j][i] == 1){
 						glPushMatrix();
 						glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
 						makeBox(box_r, box_r, box_r);
@@ -615,13 +621,87 @@ void display() {
 				}
 			}
 			glutSwapBuffers();
-
 		}
 		
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_DEPTH_TEST);
 	}
 	
+	if (crt_window == MAZE_EDIT) {
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+
+		glOrtho(-10, 150, -150, 10, -10, 10);
+		glRotatef(90, 1.0f, 0.0f, 0.0f);
+
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_TEXTURE_2D);
+		glColor4f(1, 1, 1, 1);
+
+		drawGround();
+		//画迷宫
+		for (int i = 0; i<maze_size; i++){
+			for (int j = 0; j<maze_size; j++){
+				if (new_maze[j][i] == 1)
+				{
+					glPushMatrix();
+					glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
+					makeBox(box_r, box_r, box_r);
+					glPopMatrix();
+				}
+			}
+		}
+
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_DEPTH_TEST);
+
+		//绘制网格
+		glColor3d(1, 0, 0);
+		glBegin(GL_LINES);
+
+		for (int x = -box_r / 2; x <= maze_size*box_r + box_r / 2; x += box_r) {
+
+
+			glVertex3f(x, 1, -box_r / 2);
+			glVertex3f(x, 1, maze_size*box_r - box_r / 2);
+
+		}
+		for (int z = -box_r / 2; z <= maze_size*box_r + box_r / 2; z += box_r) {
+
+			glVertex3f(-box_r / 2, 1, z);
+			glVertex3f(maze_size*box_r - box_r / 2, 1, z);
+		}
+
+		glEnd();
+
+
+		/*	//设置方块线
+		glEnable(GL_BLEND);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glDisable(GL_DEPTH_TEST);
+		glColor4f(1,0,0,0.4);
+		glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		for(int i=0;i<maze_size;i++){
+		for(int j=0;j<maze_size;j++)
+		{
+		glBegin (GL_QUADS);
+		glVertex3f (i*box_r-box_r/2,6,j*box_r-box_r/2);
+		glVertex3f (i*box_r+box_r/2,6,j*box_r-box_r/2);
+		glVertex3f (i*box_r+box_r/2,6,j*box_r+box_r/2);
+		glVertex3f (i*box_r-box_r/2,6,j*box_r+box_r/2);
+		glEnd ();
+
+
+		}
+		}
+		glDisable(GL_BLEND);
+
+		*/
+		glColor4f(1, 1, 1, 1);
+		glutSwapBuffers();
+	}
 }
 
 void outPutMaze() {
