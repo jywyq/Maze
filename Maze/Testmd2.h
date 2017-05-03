@@ -23,10 +23,9 @@ md2_model_t* md2_model_2;
 float model_center[3], model_radius;
 float model_center_2[3], model_radius_2;
 int current_frame, current_subframe, MaxFrame=39, MinFrame=1;
-int knight1 = 95, knight2 = 85;
 
 void InitializeGlut(int *argc, char *argv[]);
 void Display(void);
 void Keyboard(unsigned char key, int x, int y);
-bool LoadTexture(char *TexName, GLuint TexHandle);
-void LoadModel();
+bool loadTexture(char *TexName, GLuint TexHandle);
+void loadModel();

@@ -65,5 +65,9 @@
     <Image Include="ground.bmp">
       <Filter>资源文件</Filter>
     </Image>
+    <Image Include="GenericMech.tga" />
+    <Image Include="micai.bmp">
+      <Filter>资源文件</Filter>
+    </Image>
   </ItemGroup>
 </Project>

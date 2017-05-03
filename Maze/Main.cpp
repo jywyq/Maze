@@ -5,9 +5,11 @@
 #include <GL/glaux.h>
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <stdlib.h>
 #include <stdio.h>
 #include <windows.h>
+#include <random>
 
 //自己编写的
 #include "seekRoad.h"
@@ -19,8 +21,8 @@
 #define FIRST_PERSON 1
 #define TRIRD_PERSON 3
 //全局变量
-
-GLuint texture[2];//存储纹理数据
+const int textnum = 3;
+GLuint texture[textnum];//存储纹理数据
 float wall[8][3];//存放画墙的正方体
 
 int window_width = 640;
@@ -31,34 +33,42 @@ int maze_size = 20;
 int view = TRIRD_PERSON; //默认第三人称
 double crt_pos_x, crt_pos_z, save_pos_x, save_pos_z, look_x, look_z, eye_x, eye_y=0.5, eye_z;
 double angle, distant = 5, angleM = 90;//视角，视点离模型的位置,模型
+int bonus_r, bonus_c;
 double bili = 4;//第三视角事件体与屏幕坐标比例
 double box_r = 7;//墙体大小
+int score;
 SeekRoad seek;
-
+#define MAX_CHAR 128
+static GLuint lists;
 int maze[105][105]= {
 	{ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,1,1,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1 },
-	{ 1,0,0,0,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1 },
+	{ 0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1 },
+	{ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,0,1 },
+	{ 1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,1,1,1,1 },
+	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,1 },
+	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,1,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,0,0,0,0,0,1,0,0,1,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1 },
+	{ 1,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,1,1 },
+	{ 1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,1,1 },
+	{ 1,1,1,0,1,1,1,0,0,1,1,1,1,0,0,0,0,0,1,1 },
+	{ 1,0,0,0,1,0,1,1,0,1,1,0,0,0,1,0,1,0,0,1 },
 	{ 1,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1 },
 	{ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 }
 };
 int new_maze[105][105];//maze:当前迷宫 new_maze:当前编辑的迷宫
 int route[10000],route_size;
+int space_r[10100], space_c[10100];
+int space_count = 0;
+
+void display();
+void switchWindow(int window);
 
 void setLookEye() {
 	//将视角与当前位置对应
@@ -68,8 +78,32 @@ void setLookEye() {
 	eye_z = crt_pos_z + distant*sin(angle);
 }
 
-void display();
-void switchWindow(int window);
+void generateBasicRandom() {
+	for (int i = 0; i < maze_size; i++) {
+		for (int j = 0; j < maze_size; j++) {
+			if (maze[i][j] == 0) {
+				space_r[space_count] = i; space_c[space_count] = j;
+				space_count++;
+			}
+		}
+	}
+}
+
+void generateNewCR(int &c, int &r) {
+	if (space_count == 0)return;
+	int num = rand() % space_count;
+	c = space_c[num]; r = space_r[num];
+}
+
+void checkBonus() {
+	int maze_c = (int)((crt_pos_x + box_r / 2) / box_r);//将屏幕坐标对应为数组下标
+	int maze_r = (int)((crt_pos_z + box_r / 2) / box_r);
+	if (maze_c == bonus_c && maze_r == bonus_r) {
+		generateNewCR(bonus_c, bonus_r);
+		score++;
+	}
+	
+}
 
 void moveTo(int x, int z) {
 	int crt_r = (int)((crt_pos_z + box_r / 2) / box_r);
@@ -87,6 +121,7 @@ void moveTo(int x, int z) {
 			setLookEye();
 			display();
 		}
+		checkBonus();
 	}
 
 }
@@ -94,25 +129,28 @@ void moveTo(int x, int z) {
 void menu(int id) {
 	switch (id) {
 	case 1:
+		generateNewCR(bonus_c, bonus_r);
+		break;
+	case 2:
 		view = FIRST_PERSON;
 		glutPostRedisplay();
 		break;
-	case 2:
+	case 3:
 		view = TRIRD_PERSON;
 		glutPostRedisplay();
 		break;
-	case 3:
+	case 4:
 		save_pos_x = crt_pos_x;
 		save_pos_z = crt_pos_z;
 		glutPostRedisplay();
 		break;
-	case 4:
+	case 5:
 		//if (view == TRIRD_PERSON)
 			moveTo((int)((save_pos_x + box_r / 2) / box_r), (int)((save_pos_z + box_r / 2) / box_r));
 		setLookEye();
 		glutPostRedisplay();
 		break;
-	case 5:
+	case 6:
 		switchWindow(MAZE_EDIT);
 		break;
 	}
@@ -127,7 +165,8 @@ void newMenu(int id){
 		draw_which = GROUND;
 		break;
 	case 3://保存
-		memcpy(maze, new_maze, sizeof maze);
+		memcpy(maze, new_maze, sizeof maze); 
+		generateBasicRandom();
 		break;
 	case 4://退出
 		switchWindow(MAZE_WALK);
@@ -145,11 +184,12 @@ void newMenu(int id){
 void createMyMenu() {
 	if (crt_window == 1) {
 		glutCreateMenu(menu);
-		glutAddMenuEntry("第一视角", 1);
-		glutAddMenuEntry("第三视角", 2);
-		glutAddMenuEntry("保存当前位置", 3);
-		glutAddMenuEntry("返回保存位置", 4);
-		glutAddMenuEntry("设置迷宫", 5);
+		glutAddMenuEntry("换一个bonus", 1);
+		glutAddMenuEntry("第一视角", 2);
+		glutAddMenuEntry("第三视角", 3);
+		glutAddMenuEntry("保存当前位置", 4);
+		glutAddMenuEntry("返回保存位置", 5);
+		glutAddMenuEntry("设置迷宫", 6);
 		glutAttachMenu(GLUT_RIGHT_BUTTON);
 	}
 	else if(crt_window == 2){
@@ -190,16 +230,17 @@ void myMouseFunc(int button,int state,int x,int y){
 			new_maze[new_maze_z][new_maze_x] = 0;
 	}
 	if (button == GLUT_WHEEL_UP) {
-		distant--; 
+		distant--;
+		printf("distant %lf\n", distant);
 		setLookEye();
 		display();
 	}
 	if (button == GLUT_WHEEL_DOWN) {
-		distant++; 
+		distant++;
+		printf("distant %lf\n", distant);
 		setLookEye();
 		display();
 	}
-	printf("distant %lf\n", distant);
 
 }
 
@@ -249,9 +290,11 @@ void inputKeyFunc(int key, int x, int y) {
 		//savePosMaze();
 
 		//碰撞检测
-
-		for (int i = 0; i<maze_size; i++){
-			for (int j = 0; j<maze_size; j++){
+		int maze_c = (int)((crt_pos_x + box_r / 2) / box_r);//将屏幕坐标对应为数组下标
+		int maze_r = (int)((crt_pos_z + box_r / 2) / box_r);
+		//墙
+		for (int i = maze_c - 1; i <= maze_c + 1; i++) {
+			for (int j = maze_r - 1; j <= maze_r + 1; j++) {
 				if (maze[j][i] == 1){
 					float maze_pos_x = (float)i*box_r;
 					float maze_pos_z = (float)j*box_r;
@@ -270,6 +313,8 @@ void inputKeyFunc(int key, int x, int y) {
 				}
 			}
 		}
+		//球
+		checkBonus();
 		setLookEye();
 		glutPostRedisplay();
 	}
@@ -315,26 +360,29 @@ AUX_RGBImageRec *LoadBMP(char *Filename) {		// 载入位图图象
 }
 
 int loadGLTextures() {        // 根据加载的位图创建纹理
-	int Status = FALSE;         // 指示纹理创建是否成功的标志
+	int Status = TRUE;         // 指示纹理创建是否成功的标志
 
-	AUX_RGBImageRec *TextureImage[2];     // 创建一个纹理图像数组，这里指定数组大小为6
+	AUX_RGBImageRec *TextureImage[textnum];     // 创建一个纹理图像数组，这里指定数组大小为3
 
-	memset(TextureImage, 0, sizeof(void *) * 2);           // 初始化纹理图像数组，为其分配内存
+	memset(TextureImage, 0, sizeof(void *) * textnum);           // 初始化纹理图像数组，为其分配内存
 
-	char *pictures[] = { // 创建一个位图名称数组，对应2幅位图
+	char *pictures[] = { // 创建一个位图名称数组，对应3幅位图
 		"wall.bmp",
 		"ground.bmp",
-
+		"micai.bmp",
 	};
-	for (int i = 0; i<2; i++) { // 遍历位图名称数组，根据位图名称分别生成
+	for (int i = 0; i<textnum; i++) { // 遍历位图名称数组，根据位图名称分别生成
 		if (TextureImage[i] = LoadBMP(pictures[i])) { // 加载位图i成功，修改状态标志变量Status为TRUE
-			Status = TRUE;
 
 			glGenTextures(1, &texture[i]);     // 为第i个位图创建纹理
 			glBindTexture(GL_TEXTURE_2D, texture[i]); // 将生成的纹理的名称绑定到指定的纹理上
 			glTexImage2D(GL_TEXTURE_2D, 0, 3, TextureImage[i]->sizeX, TextureImage[i]->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, TextureImage[i]->data);//用来指定二维纹理图像
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);//实现线形滤波的功能，当纹理映射到图形表面以后，如果因为其它条件的设置导致纹理不能更好地显示的时候，进行过滤，按照指定的方式进行显示，可能会过滤掉显示不正常的纹理像素。
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);//线性滤波
+		}
+		else {
+			Status = FALSE;
+			puts("BOOM");
 		}
 
 		if (TextureImage[i]) {         // 纹理是否存在
@@ -381,9 +429,37 @@ void myInit() {
 													   //glDepthFunc(GL_LEQUAL);//深度小或相等的时候也渲染
 													   //glShadeModel(GL_SMOOTH);// 启用阴影平滑
 	crt_pos_x = 0; crt_pos_z = box_r;
+	bonus_r = 1, bonus_c = 1;
+	score = 0;
+	generateBasicRandom();
 	setLookEye();
-}
+	
+	GLfloat sun_light_position[] = { 1, 1, 1, 0.0f };
+	GLfloat sun_light_ambient[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+	GLfloat sun_light_diffuse[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+	GLfloat sun_light_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
 
+	glLightfv(GL_LIGHT0, GL_POSITION, sun_light_position); //指定第0号光源的位置   
+	glLightfv(GL_LIGHT0, GL_AMBIENT, sun_light_ambient); //GL_AMBIENT表示各种光线照射到该材质上，  
+														 //经过很多次反射后最终遗留在环境中的光线强度（颜色）  
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, sun_light_diffuse); //漫反射后~~  
+	glLightfv(GL_LIGHT0, GL_SPECULAR, sun_light_specular);//镜面反射后~~~  
+
+	glEnable(GL_LIGHT0); //使用第0号光照  
+	glEnable(GL_LIGHTING); //在后面的渲染中使用光照  
+	glEnable(GL_DEPTH_TEST); //这句是启用深度测试，这样，在后面的物体会被挡着，例如房子后面有棵树，如果不启用深度测试，  
+							 //你先画了房子再画树，树会覆盖房子的；但启用深度测试后无论你怎么画，树一定在房子后面（被房子挡着）   
+
+	//glLightModeli(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, TRUE);
+
+	// 如果是第一次调用，执行初始化 为每一个ASCII字符产生一个显示列表
+	// 申请MAX_CHAR个连续的显示列表编号
+	lists = glGenLists(MAX_CHAR);
+	// 把每个字符的绘制命令都装到对应的显示列表中
+	wglUseFontBitmaps(wglGetCurrentDC(), 0, MAX_CHAR, lists);
+}
+/*
 bool loadTexture(char *TexName, GLuint TexHandle)
 {
 	TGAImg Img;        // Image loader
@@ -410,11 +486,10 @@ bool loadTexture(char *TexName, GLuint TexHandle)
 
 	return true;
 }
-
+*/
 void loadModel() {
 	float minmax[6];
 
-	// load 3D information of the model tris.md2
 	md2_model_2 = md2_readModel("WalkMech.md2");
 	md2_getBoundingBox(md2_model_2, minmax);
 
@@ -425,7 +500,7 @@ void loadModel() {
 		(minmax[2] - minmax[3]) * (minmax[2] - minmax[3]) +
 		(minmax[4] - minmax[5]) * (minmax[4] - minmax[5])) / 2.0;
 
-	loadTexture("GenericMech.tga", Decal_Texture);
+	//loadTexture("GenericMech.tga", Decal_Texture);
 }
 
 void drawGround() {
@@ -442,26 +517,91 @@ void drawGround() {
 
 }
 
+void addLabel(const char* str) {
+	// 调用每个字符对应的显示列表，绘制每个字符
+	for (; *str != '\0'; ++str)
+		glCallList(lists + *str);
+}
+
+void drawSphere() {
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_COLOR_MATERIAL);
+	//画分数球
+	GLfloat sun_mat_ambient[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+	GLfloat sun_mat_diffuse[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	GLfloat sun_mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	//GLfloat sun_mat_emission[] = { 250.0/256, 252.0/256, 173.0/256, 1.0f };
+	GLfloat sun_mat_shininess = 128.0f;
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, sun_mat_ambient); //定义材料的前面采用 "多次反射"  
+	//glMaterialfv(GL_FRONT, GL_DIFFUSE, sun_mat_diffuse); //材料的前面为 漫反射  
+	glMaterialfv(GL_FRONT, GL_SPECULAR, sun_mat_specular); //定义材料的前面为 镜面反射  
+														   //glMaterialfv(GL_FRONT, GL_EMISSION, sun_mat_emission); //定义材料的前面为 镜面指数  
+	glMaterialf(GL_FRONT, GL_SHININESS, sun_mat_shininess); //材料的前面 采用 的颜色  
+
+	
+	double bonus_x = bonus_c * 7;
+	double bonus_z = bonus_r * 7;
+	glColor3f(0.2, 0.2, 0.2);
+	glTranslatef(bonus_x, 0, bonus_z);
+	glutSolidSphere(3.5, 400, 500);
+	glTranslatef(-bonus_x, 0, -bonus_z);
+	glColor4f(1, 1, 1, 1);
+	glDisable(GL_COLOR_MATERIAL);
+	glEnable(GL_TEXTURE_2D);
+}
+
+void drawScore() {
+	glDisable(GL_LIGHT0);
+	//分数
+	glColor3f(0.0f, 0.0f, 0.0f);
+	glRasterPos3f(120, 10, -5);
+	char str[20]("Your Score: ");
+	_itoa(score, str + 12, 10);
+	addLabel(str);
+	glColor4f(1, 1, 1, 1);
+	glEnable(GL_LIGHT0);
+	//puts("Score");
+}
+
+void drawMaze() {
+	//画地面
+	drawGround();
+
+	//画迷宫
+	for (int i = 0; i<maze_size; i++) {
+		for (int j = 0; j<maze_size; j++) {
+			if (maze[j][i] == 1) {
+				glPushMatrix();
+				glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
+				makeBox(box_r, box_r, box_r);
+				glPopMatrix();
+			}
+		}
+	}
+	drawSphere();
+
+}
+
 void display() {
 	glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glColor4f(1, 1, 1, 1);
-	
-	if (crt_window == MAZE_WALK) {
-		//载入模型
 
+	if (crt_window == MAZE_WALK) {
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_TEXTURE_2D);
 
-		glBindTexture(GL_TEXTURE_2D, Decal_Texture);
+		//glBindTexture(GL_TEXTURE_2D, Decal_Texture);
+		glBindTexture(GL_TEXTURE_2D, texture[2]);
 
 		glPushMatrix();
 		glTranslatef(crt_pos_x, -1.5, crt_pos_z);//模型位置
-		glScalef(0.07*view, 0.07*view, 0.07*view);//调整模型大小，避免第三视角时，模型太小，不好观察
+		glScalef(0.1*view, 0.1*view, 0.1*view);//调整模型大小，避免第三视角时，模型太小，不好观察
 
 		glRotatef(angleM, 0.0, 1.0, 0.0);//模型方向
 
@@ -496,31 +636,9 @@ void display() {
 
 			glOrtho(-10, 150, -150, 10, -10, 10);
 			glRotatef(90, 1.0f, 0.0f, 0.0f);
-
-
-			//画地面
-			drawGround();
-			
-			//画迷宫
-			for (int i = 0; i<maze_size; i++)
-			{
-				for (int j = 0; j<maze_size; j++)
-				{
-					if (maze[j][i] == 1)
-					{
-						glPushMatrix();
-						glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
-						makeBox(box_r, box_r, box_r);
-						glPopMatrix();
-					}
-				}
-			}
-			
-			glutSwapBuffers();
-
-
+			drawScore();
+			drawMaze();
 		}
-		
 		
 		if (view == FIRST_PERSON) {
 
@@ -533,30 +651,17 @@ void display() {
 			glOrtho(-10, 150, -150, 10, -10, 10);
 			glRotatef(90, 1.0f, 0.0f, 0.0f);
 
-			//画地面
-			drawGround();
+			drawMaze();
 
-			//画迷宫
-			for (int i = 0; i<maze_size; i++){
-				for (int j = 0; j<maze_size; j++){
-					if (maze[j][i] == 1){
-						glPushMatrix();
-						glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
-						makeBox(box_r, box_r, box_r);
-						glPopMatrix();
-					}
-				}
-			}
 			//载入模型
 
 
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 			glEnable(GL_DEPTH_TEST);
-
 			glEnable(GL_TEXTURE_2D);
 
-			glBindTexture(GL_TEXTURE_2D, Decal_Texture);
+			glBindTexture(GL_TEXTURE_2D, texture[2]);
 
 
 			//Tris
@@ -607,24 +712,14 @@ void display() {
 
 			glLoadIdentity();
 
-			//画地面
-			drawGround();
-			//画迷宫
-			for (int i = 0; i<maze_size; i++){
-				for (int j = 0; j<maze_size; j++){
-					if (maze[j][i] == 1){
-						glPushMatrix();
-						glTranslatef((float)i*box_r, 0.0f, (float)j*box_r);
-						makeBox(box_r, box_r, box_r);
-						glPopMatrix();
-					}
-				}
-			}
-			glutSwapBuffers();
+			drawMaze();
+
 		}
 		
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_DEPTH_TEST);
+
+		glutSwapBuffers();
 	}
 	
 	if (crt_window == MAZE_EDIT) {
@@ -674,7 +769,7 @@ void display() {
 
 		glEnd();
 
-
+		
 		/*	//设置方块线
 		glEnable(GL_BLEND);
 
@@ -734,9 +829,10 @@ int main(int argc, char** argv)
 	glutInitWindowSize(window_width, window_height);
 	glutCreateWindow("Maze");
 	myInit();
-
 	glutDisplayFunc(display);
 	glutIdleFunc(display);
+	drawScore();
+
 	createMyMenu();
 	glutMouseFunc(myMouseFunc);
 	glutSpecialFunc(inputKeyFunc);

@@ -40,7 +40,7 @@ int SeekRoad::seekroad(int maze[105][105], int maze_rows, int maze_cols, int *ro
 		int i = pre[r][c];
 		route[size++] = i;
 		r += mv[i][0]; c += mv[i][1];
-		printf("r:%d c:%d\n", r, c);
+		//printf("r:%d c:%d\n", r, c);
 		//maze[r][c] = 8;
 	}
 	return size;

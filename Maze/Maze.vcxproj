@@ -140,7 +140,9 @@
     <None Include="WalkMech.md2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="GenericMech.tga" />
     <Image Include="ground.bmp" />
+    <Image Include="micai.bmp" />
     <Image Include="wall.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
